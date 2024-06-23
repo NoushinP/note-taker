@@ -1,15 +1,16 @@
 const express = require("express");
 const fs = require("fs/promises"); //can manipulate files with fs modify, delete, ...
 const path = require("path");
-const { title } = require("process");
 
 const app = express();
-const notes = fs.readFile("./db/db.json"); // to read file from json or any file
+
 let PORT = process.env.PORT || 4000;
 let noteId = 1;
 app.use(express.json()); //functions that we want to use on all routs(middlewears)
+app.use(express.static("public")); // public automatically applies index.js and styles.css
 
 app.get("/api/notes", (req, res) => {
+  const notes = fs.readFile("./db/db.json"); // to read file from json or any file
   console.log("getting all notes ...");
   console.log({ req, res });
   notes.then((result) => {
@@ -18,7 +19,6 @@ app.get("/api/notes", (req, res) => {
     console.log(parsedResults);
     res.status(200).json(parsedResults);
   });
-  //   console.log(notes);
 });
 
 app.get("/api/notes/:id", (req, res) => {
@@ -38,22 +38,40 @@ app.post("/api/notes", (req, res) => {
     title: req.body.title,
     text: req.body.text,
   };
-
+  const notes = fs.readFile("./db/db.json"); // to read file from json or any file
   notes.then((result) => {
     const parsedResults = JSON.parse(result);
-    const lastNote = parsedResults[parsedResults.length - 1];
-    console.log(lastNote);
+    // const lastNote = parsedResults[parsedResults.length - 1];
     parsedResults.push(newNote);
     console.log(parsedResults);
-    res.status(200).send("created new note successfully!");
+    fs.writeFile("./db/db.json", JSON.stringify(parsedResults));
+    res.status(200).send(newNote);
   });
 });
 
 app.delete("/api/notes/:id", (req, res) => {
   console.log("deleting note with id", req.params);
+  const notes = fs.readFile("./db/db.json"); // to read file from json or any file
+  notes.then((result) => {
+    const parsedResults = JSON.parse(result);
+    const updatedNotes = parsedResults.filter(
+      (note) => note.id !== parseInt(req.params.id)
+    );
+    console.log(updatedNotes);
+    fs.writeFile("./db/db.json", JSON.stringify(updatedNotes));
+    res.status(200).send("Note has been deleted");
+  });
 });
 
 console.log("starting note-taker...");
+
+app.get("/notes", (req, res) => {
+  res.sendFile(path.join(__dirname, "/public/notes.html"));
+});
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "/public/index.html"));
+});
 
 app.listen(PORT, () => {
   console.log(
